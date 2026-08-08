@@ -1,0 +1,17 @@
+server {
+  listen 80;
+  server_name _;
+  location = ${APP_BASE_PATH} { return 308 ${APP_BASE_PATH}/; }
+  location ^~ ${APP_BASE_PATH}/api/ {
+    rewrite ^${APP_BASE_PATH}/api/(.*)$ /api/$1 break;
+    proxy_pass ${API_PROXY_TARGET};
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-ID $request_id;
+  }
+  location ^~ ${APP_BASE_PATH}/ {
+    alias /usr/share/nginx/html/;
+    try_files $uri $uri/ ${APP_BASE_PATH}/index.html;
+  }
+  location / { return 404; }
+}
