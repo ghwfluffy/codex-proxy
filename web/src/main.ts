@@ -1,4 +1,3 @@
-import "@carbon/styles/css/styles.css";
 import "./style.css";
 import { createApp } from "vue";
 import App from "./App.vue";
