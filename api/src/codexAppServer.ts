@@ -115,7 +115,7 @@ export class CodexAppServer {
 
   async startTurn(threadId: string, input: string, model: string, effort?: string): Promise<void> {
     this.messages.set(threadId, ""); this.usages.set(threadId, emptyUsage());
-    await this.request("turn/start", { threadId, input: [{ type: "text", text: input }], model, effort: effort ?? null, approvalPolicy: "never", sandboxPolicy: { type: "readOnly", access: { type: "restricted", includePlatformDefaults: true, readableRoots: [this.settings.codexCwd] }, networkAccess: false } });
+    await this.request("turn/start", { threadId, input: [{ type: "text", text: input }], model, effort: effort ?? null, approvalPolicy: "never", sandboxPolicy: { type: "readOnly", networkAccess: false } });
   }
 
   resolveTool(requestId: string | number, output: string, success = true): void { this.respond(requestId, { success, contentItems: [{ type: "inputText", text: output }] }); }
