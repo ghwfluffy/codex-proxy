@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { FederatedBanner, type FederatedBannerSite, type FederatedBannerUser } from "federated-banner";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { loginUrl, request } from "./api";
 
 type User={id:string;email:string;displayName:string;isAdmin:boolean;isOwner:boolean};
 type Key={id:string;name:string;backend:string;prefix:string;monthlyBudgetMicrousd:number|null;rpm:number;concurrency:number;revokedAt:string|null;createdAt:string};
 type Usage={bucket:string;api_key_id:string;backend:string;model:string;requests:number;input_tokens:string;cached_tokens:string;cache_write_tokens:string;output_tokens:string;estimated_cost_microusd:string;avg_duration_ms:number};
+type AuthResponse={authenticated:boolean;user:User|null;federatedApps:FederatedBannerSite[];accountSettingsUrl:string};
 const loading=ref(true),error=ref(""),user=ref<User|null>(null),keys=ref<Key[]>([]),usage=ref<Usage[]>([]),newName=ref(""),rawToken=ref(""),codex=ref<any>(null),login=ref<any>(null),connecting=ref(false);
+const federatedApps=ref<FederatedBannerSite[]>([]),accountSettings=ref("#");
 let codexPollTimer:number|undefined,pollAttempts=0;
+const appBase=(import.meta.env.VITE_APP_BASE_PATH??"").replace(/\/$/,"");
+const appHome=`${appBase}/`||"/";
+const bannerUser=computed<FederatedBannerUser|null>(()=>user.value?{displayName:user.value.displayName,username:user.value.email,isAdmin:user.value.isAdmin}:null);
+const showFederatedBanner=computed(()=>Boolean(user.value&&federatedApps.value.length));
 const activeKeys=computed(()=>keys.value.filter(key=>!key.revokedAt));
 const totals=computed(()=>usage.value.reduce((sum,row)=>({requests:sum.requests+Number(row.requests),tokens:sum.tokens+Number(row.input_tokens)+Number(row.output_tokens),cached:sum.cached+Number(row.cached_tokens),cost:sum.cost+Number(row.estimated_cost_microusd)}),{requests:0,tokens:0,cached:0,cost:0}));
 const money=(micro:number)=>`$${(micro/1_000_000).toFixed(4)}`;
-async function refresh(){error.value="";try{const auth=await request<{authenticated:boolean;user:User|null}>("/auth/me");user.value=auth.user;if(!auth.authenticated)return;[keys.value,usage.value]=await Promise.all([request<{keys:Key[]}>("/keys").then(v=>v.keys),request<{series:Usage[]}>("/usage").then(v=>v.series)]);if(user.value?.isOwner)codex.value=await request("/owner/codex").catch(e=>({connected:false,error:e.message}));}catch(e){error.value=e instanceof Error?e.message:"Request failed"}finally{loading.value=false}}
+async function refresh(){error.value="";try{const auth=await request<AuthResponse>("/auth/me");user.value=auth.user;federatedApps.value=auth.federatedApps??[];accountSettings.value=auth.accountSettingsUrl??"#";if(!auth.authenticated)return;[keys.value,usage.value]=await Promise.all([request<{keys:Key[]}>("/keys").then(v=>v.keys),request<{series:Usage[]}>("/usage").then(v=>v.series)]);if(user.value?.isOwner)codex.value=await request("/owner/codex").catch(e=>({connected:false,error:e.message}));}catch(e){error.value=e instanceof Error?e.message:"Request failed"}finally{loading.value=false}}
 async function create(){if(!newName.value.trim())return;const result=await request<{key:Key;token:string}>("/keys",{method:"POST",body:JSON.stringify({name:newName.value})});rawToken.value=result.token;newName.value="";await refresh()}
 async function revoke(id:string){await request(`/keys/${id}`,{method:"DELETE"});await refresh()}
 function stopCodexPolling(){if(codexPollTimer)window.clearTimeout(codexPollTimer);codexPollTimer=undefined;connecting.value=false;pollAttempts=0}
@@ -29,8 +36,18 @@ onUnmounted(stopCodexPolling);
 </script>
 
 <template>
+  <FederatedBanner
+    v-if="showFederatedBanner"
+    app-name="Model Gateway"
+    :app-url="appHome"
+    current-app-slug="model-gateway"
+    :account-settings-url="accountSettings"
+    :sites="federatedApps"
+    :user="bannerUser"
+    @sign-out="logout"
+  />
   <main class="shell">
-    <header class="topbar">
+    <header v-if="!showFederatedBanner" class="topbar">
       <a class="brand" href="./" aria-label="Model Gateway home"><span class="brand-mark"><i></i><i></i><i></i></span><span>Model Gateway</span></a>
       <div class="topbar-meta"><span class="secure"><i></i>Private infrastructure</span><button v-if="user" class="ghost compact" @click="logout">Sign out</button></div>
     </header>

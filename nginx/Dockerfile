@@ -5,6 +5,7 @@ ENV VITE_APP_BASE_PATH=${VITE_APP_BASE_PATH}
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 WORKDIR /workspace/web
 COPY web/package*.json ./
+COPY vendor/federated-banner/ /workspace/vendor/federated-banner/
 RUN npm install
 COPY web/ ./
 RUN npm run build

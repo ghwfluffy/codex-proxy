@@ -20,6 +20,14 @@ never prompts or generated content. The Codex home is a separate protected
 persistent mount because official App Server authentication and conversation
 rollouts require local state.
 
+The authenticated dashboard consumes the shared `vendor/federated-banner`
+package. Deployments may provide a non-secret `FEDERATED_APPS` JSON inventory;
+the existing `/api/v1/auth/me` response returns that inventory and an account
+settings link to the web client. Only configured entries appear, and banner
+sign-out uses the dashboard's existing local session endpoint. With no
+inventory configured, the deployment-neutral dashboard retains its standalone
+header and does not expose deployment branding.
+
 Gateway tokens are high-entropy bearer tokens. Only an HMAC verifier and short
 display prefix are stored. Raw tokens are returned once at creation.
 

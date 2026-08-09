@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { parseFederatedApps } from "./federation.js";
 
 const booleanValue = z.preprocess((value) => {
   if (typeof value !== "string") return value;
@@ -15,6 +16,13 @@ const schema = z.object({
   publicUrl: z.string().url().default("http://localhost:18082"),
   authMode: z.enum(["standalone", "oauth"]).default("standalone"),
   authBaseUrl: z.string().default("/auth"),
+  federatedApps: z.array(z.object({
+    slug: z.string(),
+    name: z.string(),
+    baseUrl: z.string(),
+    description: z.string().optional(),
+    icon: z.string().optional()
+  })),
   oauthServerBaseUrl: z.string().url().optional(),
   oauthClientId: z.string().default("model-gateway"),
   oauthScope: z.string().default("openid profile"),
@@ -77,6 +85,7 @@ export function loadSettings(env: NodeJS.ProcessEnv = process.env): Settings {
     publicUrl: env.PUBLIC_URL,
     authMode: env.AUTH_MODE,
     authBaseUrl: env.AUTH_BASE_URL,
+    federatedApps: parseFederatedApps(env.FEDERATED_APPS),
     oauthServerBaseUrl: env.OAUTH_SERVER_BASE_URL,
     oauthClientId: env.OAUTH_CLIENT_ID,
     oauthScope: env.OAUTH_SCOPE,

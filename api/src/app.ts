@@ -6,6 +6,7 @@ import { ensureDevSession, finishOauth, getSession, logout, startOauth } from ".
 import { usageSummary } from "./usage.js";
 import { ModelProxy } from "./proxy.js";
 import type { User } from "./types.js";
+import { accountSettingsUrl } from "./federation.js";
 
 const bad = (context: Context, status: number, code: string, message: string) => context.json({ error: { code, message } }, status as any);
 
@@ -20,7 +21,15 @@ export function buildApp(settings: Settings, db: Db, fetcher: typeof fetch = fet
   app.get("/healthz", async (context) => { try { await db.query("SELECT 1"); return context.json({ status: "ok" }); } catch { return context.json({ status: "error" }, 503); } });
   app.get("/readyz", async (context) => { try { await db.query("SELECT 1 FROM schema_migrations LIMIT 1"); return context.json({ status: "ready" }); } catch { return context.json({ status: "not_ready" }, 503); } });
 
-  app.get("/api/v1/auth/me", async (context) => { const value = await getSession(context,db,settings); return context.json({ authenticated: Boolean(value), user: value }); });
+  app.get("/api/v1/auth/me", async (context) => {
+    const value = await getSession(context, db, settings);
+    return context.json({
+      authenticated: Boolean(value),
+      user: value,
+      federatedApps: value ? settings.federatedApps : [],
+      accountSettingsUrl: value ? accountSettingsUrl(settings.authMode, settings.authBaseUrl) : "#"
+    });
+  });
   app.post("/api/v1/auth/dev-login", async (context) => settings.authMode === "standalone" ? context.json({ user: await ensureDevSession(context,db,settings) }) : bad(context,404,"not_found","Not found."));
   app.get("/api/v1/auth/login", async (context) => settings.authMode === "standalone" ? context.redirect(appUrl("/")) : context.redirect(await startOauth(db,settings,context.req.query("next") ?? "/")));
   app.get("/api/v1/auth/oauth/callback", async (context) => { const result = await finishOauth(context,db,settings,fetcher); return result ? context.redirect(appUrl(result.next)) : context.redirect(`${appUrl("/")}?oauth_error=oauth_failed`); });

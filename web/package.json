@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": { "build": "vue-tsc --noEmit && vite build", "dev": "vite", "test": "vitest run" },
-  "dependencies": { "@carbon/styles": "^1.95.0", "vue": "^3.5.25" },
+  "dependencies": { "@carbon/styles": "^1.95.0", "federated-banner": "file:../vendor/federated-banner", "vue": "^3.5.25" },
   "devDependencies": { "@types/node": "^20.19.25", "@vitejs/plugin-vue": "^5.2.4", "@vue/test-utils": "^2.4.6", "jsdom": "^24.1.3", "typescript": "^5.9.3", "vite": "^5.4.21", "vitest": "^1.6.1", "vue-tsc": "^3.1.5" }
 }
