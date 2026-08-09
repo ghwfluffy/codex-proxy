@@ -29,7 +29,9 @@ settings link keeps the shared header and account controls visible even if the
 app inventory is empty, while the Apps selector appears only for configured
 entries. Standalone deployments retain their deployment-neutral header. Web
 tests exercise the component's actual shadow DOM, open the app selector, and
-verify configured navigation links.
+verify configured navigation links. The Nginx web
+surface marks shell and API responses `no-store` so a replaced image cannot be
+masked by an older browser-cached application shell.
 
 Gateway tokens are high-entropy bearer tokens. Only an HMAC verifier and short
 display prefix are stored. Raw tokens are returned once at creation.
