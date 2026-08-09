@@ -1,10 +1,22 @@
 import { z } from "zod";
 
+function isAllowedAppUrl(value: string): boolean {
+  if (value.startsWith("/")) {
+    return !value.startsWith("//") && !/[\\\u0000-\u001f\u007f]/.test(value);
+  }
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 const federatedAppSchema = z.object({
   slug: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(100),
   baseUrl: z.string().trim().min(1).max(500).refine(
-    (value) => value.startsWith("/") || /^https?:\/\//.test(value),
+    isAllowedAppUrl,
     "App links must be root-relative or HTTP(S) URLs."
   ),
   description: z.string().trim().max(500).optional(),

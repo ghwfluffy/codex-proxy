@@ -5,7 +5,7 @@ describe("federated app navigation", () => {
   it("accepts an explicit deployment app inventory", () => {
     expect(parseFederatedApps(JSON.stringify([
       { slug: "one", name: "One", baseUrl: "/one" },
-      { slug: "two", name: "Two", baseUrl: "/two", description: "Second app" }
+      { slug: "two", name: "Two", baseUrl: "https://apps.example/two", description: "Second app" }
     ]))).toHaveLength(2);
     expect(parseFederatedApps("")).toEqual([]);
   });
@@ -13,6 +13,9 @@ describe("federated app navigation", () => {
   it("rejects invalid app inventory data", () => {
     expect(() => parseFederatedApps('[{"slug":"one"}]')).toThrow(/valid app links/);
     expect(() => parseFederatedApps('[{"slug":"bad","name":"Bad","baseUrl":"javascript:alert(1)"}]')).toThrow(/valid app links/);
+    expect(() => parseFederatedApps('[{"slug":"bad","name":"Bad","baseUrl":"//evil.example"}]')).toThrow(/valid app links/);
+    expect(() => parseFederatedApps('[{"slug":"bad","name":"Bad","baseUrl":"/\\\\evil.example"}]')).toThrow(/valid app links/);
+    expect(() => parseFederatedApps('[{"slug":"bad","name":"Bad","baseUrl":"https://"}]')).toThrow(/valid app links/);
     expect(() => parseFederatedApps("not-json")).toThrow(/valid JSON/);
   });
 
