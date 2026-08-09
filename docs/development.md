@@ -10,7 +10,8 @@ repository.
 
 `FEDERATED_APPS` is optional JSON containing deployment-owned app links with
 `slug`, `name`, `baseUrl`, and optional `description` and `icon` fields. Leave it
-unset for standalone development; configured deployments expose the entries in
-the shared authenticated banner.
+unset for standalone development, which retains the deployment-neutral header.
+OAuth deployments render the shared authenticated banner even when the
+inventory is empty, but its Apps selector appears only when entries exist.
 
 Run `./scripts/validate.sh` before committing.

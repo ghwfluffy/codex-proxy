@@ -13,7 +13,7 @@ let codexPollTimer:number|undefined,pollAttempts=0;
 const appBase=(import.meta.env.VITE_APP_BASE_PATH??"").replace(/\/$/,"");
 const appHome=`${appBase}/`||"/";
 const bannerUser=computed<FederatedBannerUser|null>(()=>user.value?{displayName:user.value.displayName,username:user.value.email,isAdmin:user.value.isAdmin}:null);
-const showFederatedBanner=computed(()=>Boolean(user.value&&federatedApps.value.length));
+const showFederatedBanner=computed(()=>Boolean(user.value&&(federatedApps.value.length||accountSettings.value!=="#")));
 const activeKeys=computed(()=>keys.value.filter(key=>!key.revokedAt));
 const totals=computed(()=>usage.value.reduce((sum,row)=>({requests:sum.requests+Number(row.requests),tokens:sum.tokens+Number(row.input_tokens)+Number(row.output_tokens),cached:sum.cached+Number(row.cached_tokens),cost:sum.cost+Number(row.estimated_cost_microusd)}),{requests:0,tokens:0,cached:0,cost:0}));
 const money=(micro:number)=>`$${(micro/1_000_000).toFixed(4)}`;
