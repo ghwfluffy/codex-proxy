@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { Settings } from "./config.js";
 import { hmac, randomToken, uuid } from "./crypto.js";
-import type { Db } from "./db.js";
+import { transaction, type Db } from "./db.js";
 import type { GatewayKey, User } from "./types.js";
 
 function fromRow(row: Record<string, unknown>): GatewayKey {
@@ -13,10 +13,10 @@ export async function listKeys(db: Db, user: User, all = false): Promise<Gateway
   return result.rows.map(fromRow);
 }
 
-export async function createKey(db: Db, settings: Settings, user: User, input: { name: string; backend?: GatewayKey["backend"]; ownerId?: string | null }): Promise<{ key: GatewayKey; token: string }> {
+export async function createKey(db: Db, settings: Settings, user: User, input: { name: string; backend?: GatewayKey["backend"] }): Promise<{ key: GatewayKey; token: string }> {
   const backend = input.backend ?? "openai_api";
   if (backend === "codex_subscription" && !user.isOwner) throw new Error("owner_required");
-  const ownerId = input.ownerId === null && user.isOwner ? null : user.id;
+  const ownerId = user.id;
   if (!user.isAdmin) {
     const count = await db.query("SELECT count(*)::int AS count FROM api_keys WHERE owner_id=$1 AND revoked_at IS NULL", [user.id]);
     if (Number(count.rows[0].count) >= settings.maxUserKeys) throw new Error("key_limit");
@@ -25,6 +25,29 @@ export async function createKey(db: Db, settings: Settings, user: User, input: {
   const prefix = raw.slice(0, 12);
   const result = await db.query(`INSERT INTO api_keys(id,owner_id,name,backend,prefix,secret_hash,monthly_budget_microusd,rpm,concurrency) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [uuid(), ownerId, input.name.trim().slice(0, 120), backend, prefix, hmac(raw, settings.keyPepper), backend === "openai_api" ? settings.defaultKeyBudgetMicrousd : null, settings.defaultRpm, settings.defaultConcurrency]);
   return { key: fromRow(result.rows[0]), token: raw };
+}
+
+export async function claimOwnerServiceKeys(db: Db, ownerId: string): Promise<number> {
+  return transaction(db, async (client) => {
+    const claimed = await client.query(
+      `UPDATE api_keys
+       SET owner_id=$1
+       WHERE owner_id IS NULL AND backend='codex_subscription'
+       RETURNING id`,
+      [ownerId]
+    );
+    await client.query(
+      `UPDATE usage_requests AS usage
+       SET owner_id=$1
+       FROM api_keys AS key
+       WHERE usage.api_key_id=key.id
+         AND usage.owner_id IS NULL
+         AND key.owner_id=$1
+         AND key.backend='codex_subscription'`,
+      [ownerId]
+    );
+    return claimed.rowCount ?? 0;
+  });
 }
 
 export async function revokeKey(db: Db, user: User, id: string): Promise<boolean> {

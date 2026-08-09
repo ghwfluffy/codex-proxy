@@ -3,6 +3,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Settings } from "./config.js";
 import type { Db } from "./db.js";
 import { pkceChallenge, randomToken, sha256, uuid } from "./crypto.js";
+import { claimOwnerServiceKeys } from "./keys.js";
 import type { Session, User } from "./types.js";
 
 function userFromRow(row: Record<string, unknown>, settings: Settings): User {
@@ -25,6 +26,9 @@ export async function createSession(context: Context, db: Db, settings: Settings
   const result = await db.query(`INSERT INTO users(id,subject,email,display_name,is_admin,monthly_budget_microusd) VALUES($1,$2,$3,$4,$5,$6)
     ON CONFLICT(subject) DO UPDATE SET email=excluded.email,display_name=excluded.display_name,is_admin=excluded.is_admin,updated_at=now() RETURNING *`,
     [userId, input.subject, input.email, input.displayName, input.isAdmin, settings.defaultUserBudgetMicrousd]);
+  if (input.subject === settings.ownerSubject) {
+    await claimOwnerServiceKeys(db, userId);
+  }
   const token = randomToken();
   const expiresAt = new Date(Date.now() + settings.sessionDurationMinutes * 60_000);
   await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)", [sha256(`${settings.sessionSecret}:${token}`), userId, expiresAt]);

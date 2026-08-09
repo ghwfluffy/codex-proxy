@@ -2,6 +2,7 @@ import { loadSettings } from "./config.js";
 import { createDb, transaction } from "./db.js";
 import { migrations } from "./migrations.js";
 import { hmac } from "./crypto.js";
+import { claimOwnerServiceKeys } from "./keys.js";
 
 export async function migrate(): Promise<void> {
   const settings = loadSettings();
@@ -25,6 +26,10 @@ export async function migrate(): Promise<void> {
         settings.defaultRpm,
         settings.defaultConcurrency
       ]);
+    }
+    const owner = await db.query("SELECT id FROM users WHERE subject=$1", [settings.ownerSubject]);
+    if (owner.rows[0]?.id) {
+      await claimOwnerServiceKeys(db, String(owner.rows[0].id));
     }
   } finally {
     await db.end();

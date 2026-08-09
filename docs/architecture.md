@@ -10,6 +10,11 @@ service keys backed by one Codex subscription through the official `codex
 app-server` stdio protocol. Subscription credentials are never shared with
 ordinary users.
 
+Codex subscription service keys belong to the configured owner account. A
+bootstrap key may be inserted before that OAuth user exists; migration startup
+or the owner's next login claims the key and its historical usage for the owner.
+New owner-created service keys are account-owned immediately.
+
 The PostgreSQL metrics store contains request metadata and token/cost counters,
 never prompts or generated content. The Codex home is a separate protected
 persistent mount because official App Server authentication and conversation
